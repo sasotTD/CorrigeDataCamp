@@ -21,6 +21,13 @@ archivos <- list.files(
   full.names = TRUE,
   recursive = TRUE
 )
+
+archivosp <- list.files(
+  path = "./data",
+  pattern = "puntos.*\\.txt$",
+  full.names = TRUE,
+  recursive = TRUE
+)
 ```
 Para Buscar todos los archivos pdf donde se encuentra el certificado de datacamp
 ```{r}
@@ -39,13 +46,18 @@ apellidos <- sapply(archivos, function(ruta) {
   
   gsub("_.*", "", alumno)
 })
+
+apellidosp <- sapply(archivosp, function(ruta) {
+  partes <- strsplit(ruta, "[\\\\/]")[[1]]
+  alumno <- partes[length(partes) - 1]
+  gsub("_.*", "", alumno)
+})
 ```
 Para importar los ficheros de puntos y obteer la puntuacion obtenida
 ```{r}
-puntuaciones <- sapply(archivos, function(f) {
-  readLines(f, warn = FALSE)
+puntuaciones <- sapply(archivosp, function(f) {
+  paste(readLines(f, warn = FALSE), collapse = " ")
 })
-
 #No, muchas de las entregas no utilizaron el nombre requerido para el fichero de puntos
 
 #El numero de variantes es calculable si y solo si suponemos que el fichero de puntos debe ser txt y no pdf, ya que algunos de los compañeros entregaron sus puntos como pdf y no son por lo tanto, diferenciables de un certificado. De este modo, calcular el numero de variantes se haría de la siguiente manera: 
@@ -63,6 +75,52 @@ length(archivos)
 length(archivos_justificante)
 ```
 Creamos el dataframe:
+```{r}
+NomFile <- basename(archivosp)
 
+evalua_df <- data.frame(
+  apellidos = apellidosp,
+  puntos = puntuaciones,
+  NomFile = NomFile,
+  Puntos = puntuaciones,
+  stringsAsFactors = FALSE
+)
+
+head(evalua_df)
+```
+Ordenar el dataframe en orden creciente y almacenarlo:
+```{r}
+evalua_df <- evalua_df[order(evalua_df$apellidos), ]
+
+library(openxlsx)
+
+write.xlsx(evalua_df, "NotasRIntermedio.xlsx")
+```
+Dataframe combinado, unificado:
+```{r}
+library(openxlsx)
+
+alumnos <- read.xlsx("./data/AlumnosTD25_26.xlsx")
+
+names(alumnos)[names(alumnos) == "Apellido(s)"] <- "apellidos"
+
+evalua_df$apellidos <- tolower(trimws(evalua_df$apellidos))
+alumnos$apellidos <- tolower(trimws(alumnos$apellidos))
+
+resultado <- merge(
+  alumnos,
+  evalua_df,
+  by.x = "apellidos",
+  by.y = "apellidos",
+  all.x = TRUE
+)
+
+
+write.xlsx(resultado, "AlumnosNotas.xlsx")
+
+
+##HAY QUE SOLUCIONAR LA COMBINACION DE DATAFRAMES ++ 
+##HAY QUE ARREGLAR LA VARIABLE PUNTOS PARA QUE SEA NUMERICA
+```
 
 
