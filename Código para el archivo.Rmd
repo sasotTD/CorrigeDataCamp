@@ -26,9 +26,43 @@ Para Buscar todos los archivos pdf donde se encuentra el certificado de datacamp
 ```{r}
 archivos_justificante <- list.files(
   path = "data",
-  pattern = ".*(certific|intermed).*\\.pdf$",
+  pattern = "\\.pdf$",
   full.names = TRUE,
   recursive = TRUE
 )
 ```
+Para buscar nombres y apellidos segun el nombre de la ruta del archivo
+```{r}
+apellidos <- sapply(archivos, function(ruta) {
+  partes <- strsplit(ruta, "\\\\")[[1]] 
+  alumno <- partes[length(partes) - 1] 
+  
+  gsub("_.*", "", alumno)
+})
+```
+Para importar los ficheros de puntos y obteer la puntuacion obtenida
+```{r}
+puntuaciones <- sapply(archivos, function(f) {
+  readLines(f, warn = FALSE)
+})
+
+#No, muchas de las entregas no utilizaron el nombre requerido para el fichero de puntos
+
+#El numero de variantes es calculable si y solo si suponemos que el fichero de puntos debe ser txt y no pdf, ya que algunos de los compañeros entregaron sus puntos como pdf y no son por lo tanto, diferenciables de un certificado. De este modo, calcular el numero de variantes se haría de la siguiente manera: 
+
+nombres <- basename(archivos)
+
+tabla_variantes <- table(nombres)
+length(tabla_variantes)
+
+#Hay exactamente 14 variantes al nombre del archivo
+
+#No, no todas las entregas poseen fichero de puntos y justificante, ya que el numero de ficheros pdf es mayor que el numero de ficher .txt
+
+length(archivos)
+length(archivos_justificante)
+```
+Creamos el dataframe:
+
+
 
