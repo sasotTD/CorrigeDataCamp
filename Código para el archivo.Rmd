@@ -24,39 +24,46 @@ archivos <- list.files(
 
 archivosp <- list.files(
   path = "./data",
-  pattern = "puntos.*\\.txt$",
+  pattern = "(puntos|Punt|poin|scor).*\\.txt$",
   full.names = TRUE,
   recursive = TRUE
 )
-```
-Para Buscar todos los archivos pdf donde se encuentra el certificado de datacamp
-```{r}
+
 archivos_justificante <- list.files(
   path = "data",
-  pattern = "\\.pdf$",
+  pattern = "certific.*\\.pdf$",
   full.names = TRUE,
   recursive = TRUE
 )
+
 ```
 Para buscar nombres y apellidos segun el nombre de la ruta del archivo
 ```{r}
-apellidos <- sapply(archivos, function(ruta) {
-  partes <- strsplit(ruta, "\\\\")[[1]] 
-  alumno <- partes[length(partes) - 1] 
-  
-  gsub("_.*", "", alumno)
-})
-
 apellidosp <- sapply(archivosp, function(ruta) {
-  partes <- strsplit(ruta, "[\\\\/]")[[1]]
+  partes <- strsplit(ruta, "[/\\\\]")[[1]]
   alumno <- partes[length(partes) - 1]
-  gsub("_.*", "", alumno)
+  
+  # QUEDARSE SOLO CON LOS APELLIDOS (ANTES DE LA COMA)
+  sub(",.*", "", alumno)
 })
 ```
 Para importar los ficheros de puntos y obteer la puntuacion obtenida
 ```{r}
 puntuaciones <- sapply(archivosp, function(f) {
-  paste(readLines(f, warn = FALSE), collapse = " ")
+  texto <- paste(readLines(f, warn = FALSE), collapse = " ")
+  texto <- trimws(texto)
+  
+  # coger números al inicio, permitiendo espacios entre ellos
+  match <- regmatches(texto, regexpr("^\\s*[0-9]+(\\s+[0-9]+)*", texto))
+  
+  if (length(match) == 0 || match == "") {
+    return(NA)
+  }
+  
+  # quitar espacios internos (para "1 200" → "1200")
+  match <- gsub("\\s+", "", match)
+  
+  as.numeric(match)
 })
 #No, muchas de las entregas no utilizaron el nombre requerido para el fichero de puntos
 
@@ -82,11 +89,19 @@ evalua_df <- data.frame(
   apellidos = apellidosp,
   puntos = puntuaciones,
   NomFile = NomFile,
-  Puntos = puntuaciones,
   stringsAsFactors = FALSE
 )
 
-head(evalua_df)
+limpiar <- function(x) {
+  x <- trimws(x)
+  x <- tolower(x)
+  x <- iconv(x, "UTF-8", "ASCII//TRANSLIT")
+  return(x)
+}
+
+evalua_df$apellidos <- limpiar(evalua_df$apellidos)
+
+View(evalua_df)
 ```
 Ordenar el dataframe en orden creciente y almacenarlo:
 ```{r}
@@ -104,23 +119,25 @@ alumnos <- read.xlsx("./data/AlumnosTD25_26.xlsx")
 
 names(alumnos)[names(alumnos) == "Apellido(s)"] <- "apellidos"
 
-evalua_df$apellidos <- tolower(trimws(evalua_df$apellidos))
-alumnos$apellidos <- tolower(trimws(alumnos$apellidos))
+alumnos$apellidos <- limpiar(alumnos$apellidos)
+
+evalua_df <- evalua_df[!duplicated(evalua_df$apellidos), ]
+
 
 resultado <- merge(
   alumnos,
   evalua_df,
-  by.x = "apellidos",
-  by.y = "apellidos",
+  by = "apellidos",
   all.x = TRUE
 )
 
+resultado
 
 write.xlsx(resultado, "AlumnosNotas.xlsx")
 
 
-##HAY QUE SOLUCIONAR LA COMBINACION DE DATAFRAMES ++ 
-##HAY QUE ARREGLAR LA VARIABLE PUNTOS PARA QUE SEA NUMERICA
+##HAY QUE SOLUCIONAR LA COMBINACION DE DATAFRAMES alumnos con evalua_df
+##HAY QUE ARREGLAR LA VARIABLE PUNTOS ha de ser numerica solo cuando el archivo contenga solo numeros o saltos de linea u espacios borrables
 ```
 
 
